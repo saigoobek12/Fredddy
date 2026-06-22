@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    />
+    <title>Assistant Overlay (Window B)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        /* Fully transparent: only the chat widget paints pixels. */
+        background: transparent;
+        overflow: hidden;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      /* The ONLY interactive region. Everything outside it is click-through. */
+      #chat-widget {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        width: 320px;
+        background: rgba(18, 24, 31, 0.92);
+        border: 1px solid rgba(81, 224, 168, 0.35);
+        border-radius: 14px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        color: #e7edf3;
+        backdrop-filter: blur(8px);
+        overflow: hidden;
+      }
+      #chat-widget header {
+        padding: 10px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        background: rgba(81, 224, 168, 0.12);
+        border-bottom: 1px solid rgba(81, 224, 168, 0.2);
+      }
+      #chat-widget .body {
+        padding: 12px 14px;
+      }
+      #chat-form {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      #chat-form .row {
+        display: flex;
+        gap: 8px;
+      }
+      #prompt-input,
+      #selector-input,
+      #chat-input {
+        min-width: 0;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #2a3b49;
+        background: #0c1116;
+        color: #e7edf3;
+        font-size: 14px;
+        outline: none;
+      }
+      #selector-input {
+        width: 100%;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+      #prompt-input,
+      #chat-input {
+        flex: 1;
+      }
+      #prompt-form {
+        display: flex;
+      }
+      #prompt-form .row {
+        flex: 1;
+      }
+      #prompt-input:focus,
+      #selector-input:focus,
+      #chat-input:focus {
+        border-color: #51e0a8;
+      }
+      .status {
+        min-height: 16px;
+        margin: 8px 2px 0;
+        font-size: 12px;
+        color: #7c8a98;
+      }
+      .status.thinking,
+      .status.running {
+        color: #6fb6ff;
+      }
+      .status.error {
+        color: #ff8585;
+      }
+      .status.done {
+        color: #51e0a8;
+      }
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 0 10px;
+        color: #5a6773;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .divider::before,
+      .divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: #233140;
+      }
+      #chat-widget.locked .body {
+        opacity: 0.55;
+        pointer-events: none;
+      }
+      .hint code {
+        color: #9fb4c4;
+      }
+      #chat-send {
+        padding: 8px 14px;
+        border: none;
+        border-radius: 8px;
+        background: #51e0a8;
+        color: #07120d;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      #chat-send:active {
+        transform: translateY(1px);
+      }
+      .hint {
+        margin: 10px 2px 0;
+        font-size: 11px;
+        color: #7c8a98;
+      }
+
+      /* Mode toggle (in-app vs. screen tutorial). */
+      .mode {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 2px 2px 8px;
+        font-size: 11px;
+        color: #9fb4c4;
+        user-select: none;
+      }
+      .mode input {
+        accent-color: #51e0a8;
+      }
+
+      /* ---------------------------------------------------------------------
+         Screen tutorial layer: a full-screen spotlight that darkens everything
+         except a glowing hole over the target region, plus a tooltip + cursor.
+         The window itself is transparent, so the dark mask is produced solely
+         by the highlight box's huge box-shadow.
+         --------------------------------------------------------------------- */
+      #tutorial-layer {
+        position: fixed;
+        inset: 0;
+        display: none;
+        pointer-events: none;
+        z-index: 2147483000;
+      }
+      #tutorial-layer.active {
+        display: block;
+      }
+      #tutorial-highlight {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 0;
+        border-radius: 8px;
+        box-shadow: 0 0 0 9999px rgba(6, 10, 14, 0.66);
+        outline: 2px solid #51e0a8;
+        outline-offset: 0;
+        transition: top 0.35s cubic-bezier(0.25, 1, 0.5, 1),
+          left 0.35s cubic-bezier(0.25, 1, 0.5, 1),
+          width 0.35s cubic-bezier(0.25, 1, 0.5, 1),
+          height 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+      #tutorial-highlight::after {
+        content: "";
+        position: absolute;
+        inset: -3px;
+        border-radius: 10px;
+        box-shadow: 0 0 18px 4px rgba(81, 224, 168, 0.65);
+      }
+      #tutorial-cursor {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 26px;
+        height: 26px;
+        margin: -4px 0 0 -4px;
+        transform: translate(-2px, -2px);
+        filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+        transition: top 0.35s cubic-bezier(0.25, 1, 0.5, 1),
+          left 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+      #tutorial-tooltip {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 300px;
+        max-width: calc(100vw - 32px);
+        padding: 14px 16px;
+        background: rgba(18, 24, 31, 0.97);
+        border: 1px solid rgba(81, 224, 168, 0.4);
+        border-radius: 12px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+        color: #e7edf3;
+        pointer-events: auto;
+        transition: top 0.35s cubic-bezier(0.25, 1, 0.5, 1),
+          left 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+      #tutorial-tooltip .t-counter {
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #51e0a8;
+      }
+      #tutorial-tooltip .t-title {
+        margin: 4px 0 6px;
+        font-size: 15px;
+        font-weight: 700;
+      }
+      #tutorial-tooltip .t-desc {
+        margin: 0 0 12px;
+        font-size: 13px;
+        line-height: 1.45;
+        color: #c4d0db;
+      }
+      #tutorial-tooltip .t-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      #tutorial-tooltip .t-hint {
+        font-size: 11px;
+        color: #7c8a98;
+      }
+      #tutorial-tooltip .t-hint kbd {
+        padding: 1px 6px;
+        border: 1px solid #2a3b49;
+        border-bottom-width: 2px;
+        border-radius: 5px;
+        background: #0c1116;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 11px;
+        color: #cfe0ed;
+      }
+      #tutorial-next {
+        padding: 7px 14px;
+        border: none;
+        border-radius: 8px;
+        background: #51e0a8;
+        color: #07120d;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      #tutorial-next:active {
+        transform: translateY(1px);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- data-interactive marks regions that should capture the mouse. -->
+    <div id="chat-widget" data-interactive>
+      <header>Assistant</header>
+      <div class="body">
+        <form id="prompt-form" autocomplete="off">
+          <div class="row">
+            <input
+              id="prompt-input"
+              type="text"
+              placeholder="Ask how to do something on your screen&hellip;"
+              aria-label="Assistant prompt"
+            />
+            <button id="prompt-send" type="submit">Send</button>
+          </div>
+        </form>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+        <p class="hint">
+          Sees your screen and walks you through it step by step. Press
+          <code>Enter</code> to advance, <code>Esc</code> to cancel.
+        </p>
+      </div>
+    </div>
+
+    <!-- Screen tutorial layer (hidden until a walkthrough starts). -->
+    <div id="tutorial-layer" aria-hidden="true">
+      <div id="tutorial-highlight"></div>
+      <svg id="tutorial-cursor" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+        <path
+          d="M5 3l14 7-6 1.5L9.5 18 5 3z"
+          fill="#ffffff"
+          stroke="#0a0f14"
+          stroke-width="1.2"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <div id="tutorial-tooltip" data-interactive>
+        <div class="t-counter" id="tutorial-counter">1/1</div>
+        <div class="t-title" id="tutorial-title"></div>
+        <p class="t-desc" id="tutorial-desc"></p>
+        <div class="t-foot">
+          <span class="t-hint">Press <kbd>Enter</kbd> for next</span>
+          <button id="tutorial-next" type="button">Next &#9654;</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./overlay.js"></script>
+  </body>
+</html>

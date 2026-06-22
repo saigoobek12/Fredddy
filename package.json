@@ -1,0 +1,29 @@
+{
+  "name": "electron-assistant-overlay",
+  "version": "0.1.0",
+  "description": "Screen-aware Electron assistant overlay: a transparent, click-through window that screenshots your screen, asks a vision model for the steps, and uses local OCR to spotlight the exact UI element for each step.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:headless": "xvfb-run -a electron .",
+    "package:win": "electron-packager . FredAssistant --platform=win32 --arch=x64 --out=dist --overwrite --asar=false --prune=true --ignore=\"(^/dist$|^/\\.git|test-|\\.md$|secret_to_upload)\"",
+    "package:linux": "electron-packager . FredAssistant --platform=linux --arch=x64 --out=dist --overwrite --asar=false --prune=true --ignore=\"(^/dist$|^/\\.git|test-|\\.md$|secret_to_upload)\""
+  },
+  "keywords": [
+    "electron",
+    "overlay",
+    "ipc",
+    "click-through",
+    "ocr",
+    "tutorial",
+    "vision"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/packager": "^20.0.1",
+    "electron": "^31.7.7"
+  },
+  "dependencies": {
+    "tesseract.js": "^7.0.0"
+  }
+}

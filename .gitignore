@@ -1,0 +1,14 @@
+node_modules/
+dist/
+out/
+*.log
+.DS_Store
+
+# Tesseract may download a copy of the language data to the CWD during dev;
+# the canonical bundled copy lives in tessdata/ and IS committed.
+/eng.traineddata
+/eng.traineddata.gz
+
+# Secrets — never commit the real API key
+.env
+/eng.traineddata
