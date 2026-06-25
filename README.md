@@ -183,3 +183,198 @@ OVERLAY_INTERACTIVE=1 npm start
 
 Then type a question like *"how do I change the opacity of my layer"*, hit
 **Send**, and step through the spotlight with **Enter**.
+## PyWinAuto OCR Integration (Enhanced Windows Automation)
+
+The app now includes optional PyWinAuto integration for enhanced UI element detection on Windows. This provides more accurate element location using native Windows accessibility APIs, with graceful fallback to Tesseract OCR.
+
+### **Features**
+
+- **Native UI Element Detection**: Uses Windows UIA/IAccessible APIs via PyWinAuto
+- **Hybrid Location Strategy**: PyWinAuto → Tesseract OCR → AI bounding box fallback
+- **Enhanced Element Info**: Captures automation IDs, control types, hierarchy
+- **Real-time Window Analysis**: Detects active window and its UI structure
+- **Performance Caching**: Caches element detection results for faster operation
+- **Graceful Degradation**: Falls back to OCR-only mode if Python unavailable
+
+### **Setup Instructions**
+
+#### **1. Install Python Dependencies**
+
+```bash
+# Run the setup script from the project root
+node install-python-deps.js
+
+# Or manually install:
+cd python-backend
+python -m pip install -r requirements.txt
+```
+
+**Requirements:**
+- Python 3.8 or later
+- Windows 10/11
+- Administrative privileges (for some UI automation)
+
+#### **2. Enable PyWinAuto in .env**
+
+Add to your `.env` file:
+
+```
+# Enable PyWinAuto enhanced detection
+PYWINAUTO_ENABLED=1
+
+# Service configuration (optional)
+PYWINAUTO_PORT=5555
+PYWINAUTO_BACKEND=uia
+
+# Location method priority
+OCRLOCATION_PRIORITY=pywinauto,tesseract,ai
+```
+
+#### **3. Configuration Options**
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `PYWINAUTO_ENABLED` | `0` (off) | Enable PyWinAuto integration (`1` = on) |
+| `PYWINAUTO_PORT` | `5555` | Python service port |
+| `PYWINAUTO_BACKEND` | `uia` | PyWinAuto backend (`uia` or `win32`) |
+| `OCRLOCATION_PRIORITY` | `pywinauto,tesseract,ai` | Element location method priority |
+
+### **How It Works**
+
+#### **Location Strategy Chain**
+
+1. **PyWinAuto Native Detection** (Highest priority, ~95% confidence):
+   - Connects to active window via Windows accessibility APIs
+   - Extracts UI elements with properties (name, automation ID, control type)
+   - Gets exact screen coordinates from Windows
+   - Works best with standard Windows applications
+
+2. **Tesseract OCR** (Fallback, ~70% confidence):
+   - Traditional OCR text recognition
+   - Finds text patterns in screenshot
+   - Good for custom UI, web apps, non-standard controls
+
+3. **AI Bounding Box** (Last resort, ~30% confidence):
+   - Uses the vision model's original bounding box
+   - Applied when both PyWinAuto and OCR fail
+
+#### **Enhanced Element Information**
+
+When PyWinAuto is enabled, tutorial steps include additional metadata:
+
+```javascript
+{
+  "target": "Save Button",
+  "kind": "button",
+  "box": [500, 500, 550, 600],
+  "title": "Save your work",
+  "desc": "Click the Save button",
+  "locatedBy": "pywinauto", // Detection method
+  "confidence": 0.95, // Location confidence
+  "elementInfo": {
+    "automationId": "btnSave",
+    "controlType": "Button",
+    "rectangle": [1920, 1080, 2000, 1120],
+    "childrenCount": 0
+  },
+  "method": "pywinauto"
+}
+```
+
+### **Testing the Integration**
+
+```bash
+# Run test script
+node test-pywinauto.js
+
+# Check logs in app (look for [PyWinAuto] messages)
+```
+
+### **Troubleshooting**
+
+#### **Common Issues**
+
+1. **"Python not found"**
+   - Install Python 3.8+ from [python.org](https://www.python.org/downloads/)
+   - Ensure Python is in PATH (`python --version` should work)
+
+2. **"Failed to install dependencies"**
+   - Run Command Prompt as Administrator
+   - Install Visual C++ Build Tools
+   - Install Windows SDK
+
+3. **"Service connection refused"**
+   - Check if port 5555 is in use
+   - Verify Python service started (check logs)
+   - Try different port: `PYWINAUTO_PORT=5556`
+
+4. **"No elements detected"**
+   - Application may not support UIA automation
+   - Try `PYWINAUTO_BACKEND=win32`
+   - Some apps require elevated privileges
+
+#### **Logs and Monitoring**
+
+The service logs to console with `[PyWinAuto]` prefix:
+- `Service initialized successfully` - Good
+- `Failed to get native elements` - Warning
+- `Enhanced location failed, falling back to OCR` - Error (fallback working)
+- `Location method stats` - Performance metrics
+
+### **Performance Considerations**
+
+- **First run**: Slower due to Python service startup (~2-3 seconds)
+- **Subsequent runs**: Fast due to caching (~100-500ms)
+- **Memory**: Python service uses ~50-100MB RAM
+- **CPU**: Minimal when idle, spikes during element detection
+
+### **Limitations**
+
+1. **Windows Only**: PyWinAuto only works on Windows
+2. **Application Support**: Some apps don't expose UI elements to accessibility APIs
+3. **Elevated Privileges**: Some system apps require admin rights
+4. **Dynamic Content**: Web apps with heavy JavaScript may not be fully accessible
+
+### **Disabling PyWinAuto**
+
+If you experience issues, disable PyWinAuto by:
+
+1. Set `PYWINAUTO_ENABLED=0` in `.env`
+2. Or remove the variable (defaults to disabled)
+3. The app will use Tesseract-only mode
+
+### **Development Notes**
+
+#### **File Structure**
+
+```
+python-backend/
+├── ocr_service.py     # Main PyWinAuto service
+├── start_service.py   # Service launcher
+├── requirements.txt   # Python dependencies
+└── config.json       # Service configuration
+
+locator-pywinauto.js   # Enhanced locator module
+python-ipc.js         # Electron-Python IPC bridge
+```
+
+#### **Extending Functionality**
+
+To add new element types or detection methods:
+
+1. Edit `python-backend/ocr_service.py` to add detection logic
+2. Update `locator-pywinauto.js` to handle new element types
+3. Add configuration options to `config.json`
+
+#### **Debug Mode**
+
+Enable detailed logging:
+
+```bash
+# Set in .env
+PYWINAUTO_DEBUG=1
+
+# Or start Python service manually with debug
+cd python-backend
+python start_service.py --debug
+```

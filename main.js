@@ -6,7 +6,8 @@ const { app, BrowserWindow, ipcMain, screen, desktopCapturer } = require('electr
 
 const IPC = require('./ipc-channels');
 const { generateTutorial, activeProviderLabel } = require('./planner');
-const { locateSteps } = require('./locator');
+// OLD SYSTEM REMOVED: const { locateSteps } = require('./locator');
+const { getPyWinAutoLocator, locateSteps } = require('./locator-pywinauto');
 
 /**
  * Candidate directories to look for a .env file, in priority order. This makes
@@ -128,7 +129,7 @@ function createOverlayWindow() {
 function registerIpcHandlers() {
   // Overlay -> main: toggle the overlay's click-through behaviour. The renderer
   // calls this with `false` while the cursor is over the interactive chat
-  // widget and `true` everywhere else.
+  // widget and `true` to make the overlay transparent to mouse input again.
   ipcMain.on(IPC.SET_IGNORE_MOUSE, (_event, ignore) => {
     // In fully-interactive mode the overlay never toggles click-through.
     if (OVERLAY_INTERACTIVE) return;
@@ -158,8 +159,7 @@ function registerIpcHandlers() {
       sendStatus('thinking', `Planning with ${activeProviderLabel()}…`);
       let steps = await generateTutorial(text, shot.dataUrl);
 
-      // Refine each step's box by finding its target text on the screenshot
-      // with local OCR (pixel-accurate); icon/region targets keep the AI box.
+      // Enhanced element location using PyWinAuto (native Windows UI + Python OCR)
       sendStatus('thinking', 'Locating elements on screen…');
       try {
         const result = await locateSteps(
@@ -167,15 +167,22 @@ function registerIpcHandlers() {
           shot.buffer,
           { width: shot.width, height: shot.height },
           {
-            // Bundled language data → works offline, no CDN download needed.
             langPath: path.join(__dirname, 'tessdata'),
             gzip: false,
             cachePath: tessCachePath()
           }
         );
+        
         steps = result.steps;
-      } catch {
-        // Keep the AI boxes if OCR refinement fails for any reason.
+        
+        // Log location statistics
+        if (result.methodStats) {
+          console.log('[OCR] Location method stats:', result.methodStats);
+          console.log('[OCR] Average confidence:', result.confidence || 'N/A');
+        }
+      } catch (error) {
+        console.error('Element location failed:', error);
+        // Keep the AI boxes if location refinement fails
       }
 
       sendStatus('running', `Guiding you through ${steps.length} step(s)…`);

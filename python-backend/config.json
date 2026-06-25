@@ -1,0 +1,33 @@
+{
+  "service": {
+    "port": 5555,
+    "host": "127.0.0.1",
+    "backend": "uia",
+    "enable_cache": true,
+    "cache_ttl": 5.0
+  },
+  "detection": {
+    "max_element_depth": 10,
+    "min_element_size": 10,
+    "include_invisible": false,
+    "include_disabled": false,
+    "confidence_threshold": 0.5
+  },
+  "performance": {
+    "element_cache_size": 1000,
+    "screenshot_cache_size": 10,
+    "polling_interval": 500
+  },
+  "ocr": {
+    "enabled": true,
+    "fallback_to_tesseract": true,
+    "tesseract_path": null,
+    "tesseract_language": "eng"
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "pywinauto_service.log",
+    "max_size_mb": 10,
+    "backup_count": 3
+  }
+}

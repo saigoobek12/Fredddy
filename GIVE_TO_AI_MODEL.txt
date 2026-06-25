@@ -1,0 +1,53 @@
+═══════════════════════════════════════════════════════════
+COPY THIS ENTIRE TEXT AND PASTE TO AI CODING MODEL
+═══════════════════════════════════════════════════════════
+
+You are an AI coding assistant (DeepSeek/GLM/Claude/GPT/etc).
+
+PROJECT LOCATION: C:\Users\user\Desktop\Freddy
+
+TASK: Remove old Tesseract.js OCR system, make PyWinAuto the primary OCR
+
+INSTRUCTION FILE: AI_CODER_INSTRUCTIONS.md (in project root)
+
+YOUR JOB:
+1. Read AI_CODER_INSTRUCTIONS.md completely
+2. Execute STEP 1 through STEP 10 in exact order
+3. Copy all code blocks EXACTLY as shown
+4. Do not skip steps or optimize code
+5. Run test-migration.js at the end
+6. Create git commit when all tests pass
+
+CRITICAL RULES:
+• Follow instructions PRECISELY
+• Execute steps in EXACT order given
+• Copy code VERBATIM (no modifications)
+• Verify each step before proceeding
+• If unclear, state what's unclear before proceeding
+
+FILES YOU WILL MODIFY:
+1. python-backend/ocr_service.py      (add OCR endpoint)
+2. locator-pywinauto.js               (update to use Python OCR)
+3. main.js                            (simplify imports)
+4. package.json                       (remove tesseract.js)
+5. .env.example                       (update defaults)
+6. README.md                          (update docs)
+
+FILES YOU WILL CREATE:
+1. test-migration.js                  (validation script)
+
+FILES YOU WILL DELETE:
+1. locator.js → locator-legacy.js.bak (archive old system)
+
+VALIDATION:
+After completing all steps, run:
+  cd C:\Users\user\Desktop\Freddy
+  node test-migration.js
+
+Expected: "✓ ALL TESTS PASSED! Migration successful."
+
+START NOW WITH: STEP 1 in AI_CODER_INSTRUCTIONS.md
+
+═══════════════════════════════════════════════════════════
+END OF TEXT TO PASTE TO AI MODEL
+═══════════════════════════════════════════════════════════

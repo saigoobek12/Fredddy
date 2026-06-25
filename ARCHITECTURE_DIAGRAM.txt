@@ -1,0 +1,178 @@
+═══════════════════════════════════════════════════════════
+ARCHITECTURE: BEFORE → AFTER MIGRATION
+═══════════════════════════════════════════════════════════
+
+BEFORE (CURRENT - 2 OCR SYSTEMS):
+════════════════════════════════════
+
+main.js
+  ↓
+  ├─→ locator.js (Tesseract.js - Node.js)
+  │    ↓
+  │    └─→ tesseract.js npm package
+  │         └─→ WASM OCR engine
+  │
+  └─→ locator-pywinauto.js (PyWinAuto - Python)
+       ↓
+       └─→ python-ipc.js → Flask API (port 5555)
+            └─→ ocr_service.py → PyWinAuto (native UI)
+
+PROBLEMS:
+• Code duplication
+• Two separate OCR systems
+• Large bundle size (tesseract.js + WASM)
+• Complex conditional logic
+
+═══════════════════════════════════════════════════════════
+
+AFTER (TARGET - 1 UNIFIED OCR SYSTEM):
+══════════════════════════════════════
+
+main.js
+  ↓
+  └─→ locator-pywinauto.js (SINGLE ENTRY POINT)
+       ↓
+       └─→ python-ipc.js → Flask API (port 5555)
+            ↓
+            └─→ ocr_service.py
+                 ├─→ PyWinAuto (native UI)    [95% accuracy]
+                 └─→ pytesseract (OCR)        [70% accuracy]
+
+BENEFITS:
+• Single code path
+• Unified OCR in Python
+• Smaller bundle size
+• Simpler logic
+• Better performance
+
+═══════════════════════════════════════════════════════════
+
+LOCATION PRIORITY CHAIN:
+════════════════════════
+
+User asks: "how do I save a file?"
+         ↓
+    main.js captures question
+         ↓
+    AI Vision Model (Gemini/Groq)
+    Returns: [{target: "Save", box: [rough coords]}]
+         ↓
+    locateSteps(steps)  ← ENTRY POINT
+         ↓
+    ┌────────────────────────────────┐
+    │ locator-pywinauto.js           │
+    └────────────────────────────────┘
+         ↓
+    Priority Chain:
+    
+    1. Try PyWinAuto (native Windows UI)
+       └─→ Success? Return coordinates
+           └─→ Fail? Continue ↓
+    
+    2. Try Python OCR (pytesseract)
+       └─→ Success? Return coordinates
+           └─→ Fail? Continue ↓
+    
+    3. Use AI box (fallback)
+       └─→ Return rough AI coordinates
+
+═══════════════════════════════════════════════════════════
+
+FILE DEPENDENCIES (AFTER MIGRATION):
+════════════════════════════════════
+
+main.js
+  imports: locator-pywinauto.js
+  calls: locateSteps(steps, buffer, dims, opts)
+  
+locator-pywinauto.js
+  imports: python-ipc.js
+  exports: { locateSteps, getPyWinAutoLocator }
+  calls:
+    - _locateWithPyWinAuto()     (native UI)
+    - _locateWithPythonOCR()     (OCR fallback)
+  
+python-ipc.js
+  class: PyWinAutoService
+  methods:
+    - startService()
+    - _request(method, endpoint, data)
+  endpoints:
+    - POST /elements/active-window
+    - POST /ocr/text-locate       [NEW]
+  
+python-backend/ocr_service.py
+  class: PyWinAutoOCRService
+  methods:
+    - get_all_elements()          (PyWinAuto)
+    - _locate_text_in_ocr_data()  [NEW]
+  routes:
+    - GET  /health
+    - POST /elements/active-window
+    - POST /ocr/text-locate       [NEW]
+
+═══════════════════════════════════════════════════════════
+
+DATA FLOW EXAMPLE:
+══════════════════
+
+1. User: "how do I click save button?"
+   
+2. main.js → AI Vision → [{target:"Save", box:[500,500,550,600]}]
+
+3. main.js → locateSteps(steps)
+
+4. locator-pywinauto.js → _locateWithPyWinAuto()
+   → Python /elements/active-window
+   → Finds button with automation_id="btnSave"
+   → Returns: {box:[exact coords], confidence:0.95}
+   
+5. Return to user: Highlight "Save" button with spotlight
+
+─────────────────────────────────────────────────────────────
+
+ALTERNATIVE FLOW (OCR FALLBACK):
+
+1. User: "how do I click search?" (in web browser)
+
+2. main.js → AI Vision → [{target:"Search", box:[100,200,150,300]}]
+
+3. locator-pywinauto.js → _locateWithPyWinAuto()
+   → Python /elements/active-window
+   → No native element found (web content)
+   → Returns: null
+   
+4. locator-pywinauto.js → _locateWithPythonOCR()
+   → Python /ocr/text-locate
+   → pytesseract.image_to_data(screenshot)
+   → Finds "Search" text in image
+   → Returns: {box:[exact coords], confidence:0.75}
+
+5. Return to user: Highlight "Search" text with spotlight
+
+═══════════════════════════════════════════════════════════
+
+KEY CHANGES SUMMARY:
+════════════════════
+
+REMOVED:
+✗ locator.js                    (entire file)
+✗ tesseract.js dependency       (package.json)
+✗ node_modules/tesseract.js/*   (npm package)
+✗ _locateWithTesseract() method (in locator-pywinauto.js)
+✗ Conditional OCR logic         (in main.js)
+
+ADDED:
+✓ _locate_text_in_ocr_data()    (ocr_service.py)
+✓ /ocr/text-locate endpoint     (ocr_service.py)
+✓ _locateWithPythonOCR() method (locator-pywinauto.js)
+✓ test-migration.js             (validation)
+
+MODIFIED:
+→ locator-pywinauto.js          (default enabled, Python OCR)
+→ main.js                       (simplified imports)
+→ package.json                  (removed dependency)
+→ .env.example                  (updated defaults)
+→ README.md                     (updated docs)
+
+═══════════════════════════════════════════════════════════

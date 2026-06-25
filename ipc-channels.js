@@ -19,5 +19,15 @@ module.exports = Object.freeze({
   OVERLAY_TUTORIAL_PROMPT: 'overlay:tutorial-prompt',
   // Main -> overlay renderer: ordered tutorial steps
   // ([{ box, title, desc, target, kind }]).
-  OVERLAY_TUTORIAL_STEPS: 'overlay:tutorial-steps'
+  OVERLAY_TUTORIAL_STEPS: 'overlay:tutorial-steps',
+
+  // PyWinAuto OCR Service channels
+  PYWINAUTO_SERVICE_START: 'pywinauto:service-start',
+  PYWINAUTO_SERVICE_STOP: 'pywinauto:service-stop',
+  PYWINAUTO_SERVICE_STATUS: 'pywinauto:service-status',
+  PYWINAUTO_OCR_REQUEST: 'pywinauto:ocr-request',
+  PYWINAUTO_OCR_RESPONSE: 'pywinauto:ocr-response',
+  PYWINAUTO_ELEMENTS: 'pywinauto:elements',
+  PYWINAUTO_LOCATE: 'pywinauto:locate',
+  PYWINAUTO_HEALTH_CHECK: 'pywinauto:health-check'
 });
