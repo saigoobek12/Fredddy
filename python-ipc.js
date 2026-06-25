@@ -357,6 +357,19 @@ class PyWinAutoService {
     }
 
     /**
+     * Locate text using Python Tesseract OCR
+     * @param {Object} options Search options
+     * @param {string} options.screenshot Base64 screenshot data
+     * @param {string} options.target Text to locate
+     * @param {Array} options.targetBox Optional bounding box for disambiguation
+     * @param {Object} options.dimensions Image dimensions {width, height}
+     * @returns {Promise<Object>} OCR location results
+     */
+    async locateTextInOCR(options = {}) {
+        return this._requestWithRetry('POST', '/ocr/text-locate', options);
+    }
+
+    /**
      * Get service statistics
      * @returns {Object} Service stats
      */

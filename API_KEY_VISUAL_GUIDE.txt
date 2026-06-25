@@ -1,0 +1,132 @@
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║              FIX: Invalid API Key Error                      ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+ERROR YOU'RE SEEING:
+┌────────────────────────────────────────────────────────────┐
+│ Groq vision API error 401: Invalid API Key                │
+└────────────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SOLUTION: 3 SIMPLE STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1: Get a New API Key
+─────────────────────────────────────────────────────────────
+
+   Choose ONE:
+
+   ⭐ RECOMMENDED: OpenRouter
+      → Go to: https://openrouter.ai/keys
+      → Sign up (free)
+      → Create key
+      → Copy key (starts with: sk-or-v1-)
+
+   🆓 FREE: Groq  
+      → Go to: https://console.groq.com/keys
+      → Sign up
+      → Create key
+      → Copy key (starts with: gsk_)
+
+   🔷 Google Gemini
+      → Go to: https://aistudio.google.com/apikey
+      → Sign in
+      → Create key
+      → Copy key
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 2: Edit .env File
+─────────────────────────────────────────────────────────────
+
+   1. Open File Explorer
+   2. Go to: C:\Users\user\Desktop\Freddy
+   3. Find: .env file
+   4. Right-click → Open with Notepad
+
+   Your .env should look like this:
+   ┌────────────────────────────────────────────────────────┐
+   │ # OpenRouter (recommended)                             │
+   │ OPENROUTER_API_KEY=sk-or-v1-YOUR_ACTUAL_KEY_HERE      │
+   │                                                        │
+   │ # Comment out other keys                              │
+   │ # GROQ_API_KEY=old_key                                │
+   │                                                        │
+   │ # Enable PyWinAuto                                    │
+   │ PYWINAUTO_ENABLED=1                                   │
+   └────────────────────────────────────────────────────────┘
+
+   ⚠️ IMPORTANT:
+   • NO spaces before/after =
+   • NO quotes around key
+   • Replace YOUR_ACTUAL_KEY_HERE with your real key!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 3: Save and Restart
+─────────────────────────────────────────────────────────────
+
+   1. Save the .env file (Ctrl+S)
+   2. Close app if running (Ctrl+C)
+   3. Double-click: RUN_APP.bat
+   4. Test: Type "how do I save a file?" and press Enter
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  COMMON MISTAKES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ WRONG: Still has placeholder
+   OPENROUTER_API_KEY=your_openrouter_key_here
+
+❌ WRONG: Extra spaces
+   OPENROUTER_API_KEY= sk-or-key
+   OPENROUTER_API_KEY=sk-or-key 
+
+❌ WRONG: Has quotes
+   OPENROUTER_API_KEY="sk-or-key"
+
+❌ WRONG: Multiple uncommented keys
+   OPENROUTER_API_KEY=sk-or-key
+   GROQ_API_KEY=gsk-key
+
+✅ CORRECT: Clean, no spaces, no quotes
+   OPENROUTER_API_KEY=sk-or-v1-1234567890abcdef
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  VERIFY IT WORKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When app starts, you should see:
+
+✅ GOOD OUTPUT:
+┌────────────────────────────────────────────────────────────┐
+│ [assistant] AI provider: OpenRouter                        │
+│ [PyWinAuto] Starting PyWinAuto OCR service...             │
+│ [PyWinAuto] Service initialized successfully              │
+└────────────────────────────────────────────────────────────┘
+
+❌ STILL BROKEN:
+┌────────────────────────────────────────────────────────────┐
+│ Groq vision API error 401: Invalid API Key                │
+└────────────────────────────────────────────────────────────┘
+   → Check your .env file again!
+   → Run: CHECK_API_KEY.bat
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  NEED HELP?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Run diagnostics:
+   Double-click: CHECK_API_KEY.bat
+
+Read full guide:
+   Open: FIX_API_KEY.md
+
+Test Python service:
+   Double-click: TEST_PYTHON_OCR.bat
+
+╔══════════════════════════════════════════════════════════════╗
+║  After fixing, restart app: RUN_APP.bat                      ║
+╚══════════════════════════════════════════════════════════════╝

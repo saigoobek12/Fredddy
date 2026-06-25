@@ -343,20 +343,15 @@ class PyWinAutoLocator {
             console.log(`[PyWinAuto] Attempting Python OCR for: "${step.target}"`);
             
             // Call Python service OCR endpoint
-            const response = await this.pywinautoService._request(
-                'POST',
-                '/ocr/text-locate',
-                {
-                    screenshot: screenshotBase64,
-                    target: step.target,
-                    targetBox: step.box || [],
-                    dimensions: {
-                        width: dimensions.width || 1920,
-                        height: dimensions.height || 1080
-                    }
-                },
-                15000  // 15 second timeout for OCR
-            );
+            const response = await this.pywinautoService.locateTextInOCR({
+                screenshot: screenshotBase64,
+                target: step.target,
+                targetBox: step.box || [],
+                dimensions: {
+                    width: dimensions.width || 1920,
+                    height: dimensions.height || 1080
+                }
+            });
             
             if (response && response.located) {
                 console.log(`[PyWinAuto] Python OCR found "${step.target}" with confidence ${response.confidence}`);

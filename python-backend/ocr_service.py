@@ -174,7 +174,28 @@ class PyWinAutoOCRService:
             if hasattr(element, 'is_enabled') and not element.is_enabled():
                 return
             
-            # Get element properties
+            # Get element properties - safely handle can_be_focused
+            is_focusable = False
+            try:
+                # Try direct attribute access first
+                if hasattr(element, 'can_be_focused'):
+                    is_focusable = bool(element.can_be_focused)
+                # Try through get_properties method
+                elif hasattr(element, 'get_properties'):
+                    props = element.get_properties()
+                    is_focusable = bool(props.get('can_be_focused', False))
+                # Try through UIA control pattern
+                elif hasattr(element, 'current_isKeyboardFocusable'):
+                    is_focusable = bool(element.current_isKeyboardFocusable)
+                # Fallback: try to get focusable state from control type
+                else:
+                    control_type = element.friendly_class_name().lower() if hasattr(element, 'friendly_class_name') else ""
+                    # Common focusable controls
+                    focusable_types = ['button', 'edit', 'combobox', 'listitem', 'menuitem', 'checkbox', 'radiobutton']
+                    is_focusable = any(ft in control_type for ft in focusable_types)
+            except Exception:
+                is_focusable = False
+            
             element_info = {
                 "depth": depth,
                 "control_type": element.friendly_class_name() if hasattr(element, 'friendly_class_name') else type(element).__name__,
@@ -183,7 +204,7 @@ class PyWinAutoOCRService:
                 "name": element.window_text() if hasattr(element, 'window_text') else "",
                 "rectangle": self._get_element_rect(element),
                 "children_count": 0,
-                "is_focusable": getattr(element, 'can_be_focused', False) if hasattr(element, 'can_be_focused') else False,
+                "is_focusable": is_focusable,
                 "is_editable": self._is_editable_element(element),
                 "is_button": self._is_button_element(element),
                 "is_menu": self._is_menu_element(element),
@@ -637,6 +658,121 @@ def analyze_screen():
         })
     except Exception as e:
         logger.error(f"Analyze screen error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/ocr/text-locate', methods=['POST'])
+def ocr_text_locate():
+    """Locate text using Python Tesseract OCR"""
+    try:
+        data = request.json
+        screenshot_base64 = data.get('screenshot')
+        target_text = data.get('target', '').strip()
+        target_box = data.get('targetBox', [])
+        dimensions = data.get('dimensions', {'width': 1920, 'height': 1080})
+        
+        if not target_text:
+            return jsonify({"error": "No target text provided"}), 400
+        
+        if not screenshot_base64:
+            return jsonify({"error": "No screenshot provided"}), 400
+        
+        # Decode screenshot
+        try:
+            img_data = base64.b64decode(screenshot_base64)
+            image = Image.open(BytesIO(img_data))
+        except Exception as e:
+            logger.error(f"Failed to decode screenshot: {e}")
+            return jsonify({"error": "Invalid screenshot data"}), 400
+        
+        # Run OCR using pytesseract
+        ocr_data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
+        
+        # Find matching text
+        W = dimensions.get('width', 1920)
+        H = dimensions.get('height', 1080)
+        
+        target_lower = target_text.lower().strip()
+        candidates = []
+        
+        n_boxes = len(ocr_data['text'])
+        for i in range(n_boxes):
+            text = str(ocr_data['text'][i]).strip()
+            try:
+                conf = int(ocr_data['conf'][i])
+            except (ValueError, TypeError):
+                conf = 0
+            
+            if conf < 40 or not text:
+                continue
+            
+            # Check if target text is in OCR text (fuzzy match)
+            if target_lower in text.lower() or text.lower() in target_lower:
+                left = int(ocr_data['left'][i])
+                top = int(ocr_data['top'][i])
+                width = int(ocr_data['width'][i])
+                height = int(ocr_data['height'][i])
+                
+                # Calculate normalized box [ymin, xmin, ymax, xmax] 0-1000 scale
+                norm_box = [
+                    max(0, min(1000, int((top / H) * 1000))),
+                    max(0, min(1000, int((left / W) * 1000))),
+                    max(0, min(1000, int(((top + height) / H) * 1000))),
+                    max(0, min(1000, int(((left + width) / W) * 1000)))
+                ]
+                
+                candidates.append({
+                    'text': text,
+                    'box': norm_box,
+                    'confidence': conf / 100.0,
+                    'rect': [left, top, left + width, top + height],
+                    'center': [(left + width / 2), (top + height / 2)]
+                })
+        
+        if not candidates:
+            return jsonify({
+                'located': False,
+                'error': 'No matching text found in OCR',
+                'matchedText': None,
+                'normalizedBox': None,
+                'confidence': 0
+            })
+        
+        # If only one candidate, return it
+        if len(candidates) == 1:
+            best = candidates[0]
+        else:
+            # Multiple candidates - pick nearest to target box
+            if target_box and len(target_box) == 4:
+                # Calculate center of target box in pixels
+                target_center_x = ((target_box[1] + target_box[3]) / 2 / 1000) * W
+                target_center_y = ((target_box[0] + target_box[2]) / 2 / 1000) * H
+                
+                # Find candidate nearest to target center
+                best = candidates[0]
+                min_distance = float('inf')
+                
+                for candidate in candidates:
+                    cx, cy = candidate['center']
+                    distance = ((cx - target_center_x) ** 2 + (cy - target_center_y) ** 2) ** 0.5
+                    
+                    if distance < min_distance:
+                        min_distance = distance
+                        best = candidate
+            else:
+                # No target box, pick highest confidence
+                best = max(candidates, key=lambda c: c['confidence'])
+        
+        return jsonify({
+            'located': True,
+            'normalizedBox': best['box'],
+            'confidence': best['confidence'],
+            'matchedText': best['text'],
+            'method': 'python-ocr'
+        })
+        
+    except Exception as e:
+        logger.error(f"OCR text locate error: {e}")
         return jsonify({"error": str(e)}), 500
 
 

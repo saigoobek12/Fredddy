@@ -88,7 +88,7 @@ function createOverlayWindow() {
     frame: false,
     alwaysOnTop: true,
     resizable: false,
-    movable: false,
+    movable: true,
     skipTaskbar: true,
     hasShadow: false,
     fullscreenable: false,
